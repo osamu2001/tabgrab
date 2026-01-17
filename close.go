@@ -31,7 +31,7 @@ type closeOptions struct {
 }
 
 func parseCloseFlags(fs *flag.FlagSet, args []string) (*closeOptions, error) {
-	attachCommonFlags(fs)
+	attachCommonFlags(fs, defaultBrowser)
 
 	var (
 		match = fs.String(
@@ -57,7 +57,7 @@ func parseCloseFlags(fs *flag.FlagSet, args []string) (*closeOptions, error) {
 		return nil, err
 	}
 
-	commonOpts, err := parseCommonOptions()
+	commonOpts, err := parseCommonOptions(false)
 	if err != nil {
 		return nil, err
 	}

@@ -35,7 +35,7 @@ type tabsOptions struct {
 }
 
 func parseTabsFlags(fs *flag.FlagSet, args []string) (*tabsOptions, error) {
-	attachCommonFlags(fs)
+	attachCommonFlags(fs, defaultBrowser)
 
 	var (
 		urlList = fs.String(
@@ -71,7 +71,7 @@ func parseTabsFlags(fs *flag.FlagSet, args []string) (*tabsOptions, error) {
 		return nil, err
 	}
 
-	commonOpts, err := parseCommonOptions()
+	commonOpts, err := parseCommonOptions(false)
 	if err != nil {
 		return nil, err
 	}

@@ -28,7 +28,7 @@ $ tabgrab grab -h
 
 Usage of grab:
   -browser string
-    	browser name (default "chrome")
+    	browser name (default "all")
   -clipboard
     	use clipboard for input/output
   -file string
@@ -103,7 +103,7 @@ The following environment variables can be used to change default flag values:
 ### Examples
 
 #### Using stdout
-Extract all open tabs from the browser's current window (defaults)
+Extract all open tabs from all running supported browsers (default)
 ```
 $ tabgrab grab
 https://github.com/dkaslovsky/tabgrab/tree/main
@@ -182,7 +182,7 @@ $ tabgrab close -match "foo" -no-match "bar"
 
 ### Support status for common browsers
 * ChatGPT Atlas - supported
-* Chrome  - supported (default)
+* Chrome  - supported (default for tabs/close)
 * Brave   - supported
 * Comet   - supported
 * Safari  - supported

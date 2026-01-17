@@ -2,6 +2,7 @@ package main
 
 const (
 	// Browser names
+	browserNameAll    = "all"
 	browserNameAtlas  = "atlas"
 	browserNameBrave  = "brave"
 	browserNameChrome = "chrome"

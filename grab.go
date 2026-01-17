@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -31,7 +32,7 @@ type grabOptions struct {
 }
 
 func parseGrabFlags(fs *flag.FlagSet, args []string) (*grabOptions, error) {
-	attachCommonFlags(fs)
+	attachCommonFlags(fs, defaultBrowserGrab)
 
 	var (
 		urlFile = fs.String(
@@ -62,7 +63,7 @@ func parseGrabFlags(fs *flag.FlagSet, args []string) (*grabOptions, error) {
 		return nil, err
 	}
 
-	commonOpts, err := parseCommonOptions()
+	commonOpts, err := parseCommonOptions(true)
 	if err != nil {
 		return nil, err
 	}
@@ -112,33 +113,6 @@ func grabTabs(opts *grabOptions) error {
 		}
 	}()
 
-	// Buffers to capture stdout and stderr
-	var stdout, stderr bytes.Buffer
-
-	tabNameProp := "title"
-	if opts.browserApp.name == browserNameSafari {
-		tabNameProp = "name"
-	}
-	// Script to capture URL of tab i
-	tabScript := "tell application \"" + opts.browserApp.cmdName + "\" to get {URL, " + tabNameProp + "} of tab %d of window 1"
-
-	running, err := isBrowserRunning(opts.browserApp.cmdName, opts.verbose)
-	if err != nil {
-		return fmt.Errorf("failed to check if browser is running: %w", err)
-	}
-
-	if running {
-		for i := 0; i < opts.maxTabs; i++ {
-			err := execOsaScript(fmt.Sprintf(tabScript, i+1), &stdout, &stderr, opts.verbose)
-			if err != nil {
-				if errors.Is(err, errEndOfTabs) {
-					break
-				}
-				return fmt.Errorf("failed to get tab: %w", err)
-			}
-		}
-	}
-
 	// Write output
 	defer opts.urlWriter.Close()
 	writer := bufio.NewWriter(opts.urlWriter)
@@ -146,20 +120,70 @@ func grabTabs(opts *grabOptions) error {
 	if err != nil {
 		return fmt.Errorf("failed to construct writer template: %w", err)
 	}
-	for _, tab := range parseTabInfo(stdout) {
-		if tab.URL != "" || tab.Name != "" {
-			err := writeF(tab)
-			if err != nil {
-				return fmt.Errorf("failed to write output to buffer: %w", err)
+
+	for _, browserApp := range grabBrowserApps(opts.commonOptions) {
+		// Buffers to capture stdout and stderr
+		var stdout, stderr bytes.Buffer
+
+		tabNameProp := "title"
+		if browserApp.name == browserNameSafari {
+			tabNameProp = "name"
+		}
+		// Script to capture URL of tab i
+		tabScript := "tell application \"" + browserApp.cmdName + "\" to get {URL, " + tabNameProp + "} of tab %d of window 1"
+
+		running, err := isBrowserRunning(browserApp.cmdName, opts.verbose)
+		if err != nil {
+			return fmt.Errorf("failed to check if browser is running: %w", err)
+		}
+
+		if running {
+			for i := 0; i < opts.maxTabs; i++ {
+				err := execOsaScript(fmt.Sprintf(tabScript, i+1), &stdout, &stderr, opts.verbose)
+				if err != nil {
+					if errors.Is(err, errEndOfTabs) {
+						break
+					}
+					return fmt.Errorf("failed to get tab: %w", err)
+				}
+			}
+		}
+
+		for _, tab := range parseTabInfo(stdout) {
+			if tab.URL != "" || tab.Name != "" {
+				err := writeF(tab)
+				if err != nil {
+					return fmt.Errorf("failed to write output to buffer: %w", err)
+				}
 			}
 		}
 	}
+
 	err = writer.Flush()
 	if err != nil {
 		return fmt.Errorf("failed to flush buffer: %w", err)
 	}
 
 	writeCleanup = false
+	return nil
+}
+
+func grabBrowserApps(opts *commonOptions) []*browserApplication {
+	if opts != nil && opts.browserAll {
+		names := make([]string, 0, len(browserApplications))
+		for name := range browserApplications {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		apps := make([]*browserApplication, 0, len(names))
+		for _, name := range names {
+			apps = append(apps, browserApplications[name])
+		}
+		return apps
+	}
+	if opts != nil && opts.browserApp != nil {
+		return []*browserApplication{opts.browserApp}
+	}
 	return nil
 }
 

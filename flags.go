@@ -10,9 +10,10 @@ import (
 
 // Defaults
 const (
-	defaultBrowser = browserNameChrome
-	defaultMaxTabs = 100
-	defaultPrefix  = ""
+	defaultBrowser     = browserNameChrome
+	defaultBrowserGrab = browserNameAll
+	defaultMaxTabs     = 100
+	defaultPrefix      = ""
 
 	defaultTemplate = templateURL
 )
@@ -37,8 +38,8 @@ type commonFlags struct {
 // Global instance of the common flag values struct
 var cFlags commonFlags
 
-func attachCommonFlags(fs *flag.FlagSet) {
-	fs.StringVar(&cFlags.browser, "browser", setStringFlagDefault(defaultBrowser, envVarBrowser), "browser name")
+func attachCommonFlags(fs *flag.FlagSet, browserDefault string) {
+	fs.StringVar(&cFlags.browser, "browser", setStringFlagDefault(browserDefault, envVarBrowser), "browser name")
 	fs.IntVar(&cFlags.maxTabs, "max", defaultMaxTabs, "maximum number of tabs")
 	fs.StringVar(&cFlags.prefix, "prefix", setStringFlagDefault(defaultPrefix, envVarPrefix), "optional prefix for each URL")
 	fs.BoolVar(&cFlags.clipboard, "clipboard", false, "use clipboard for input/output")
@@ -47,26 +48,31 @@ func attachCommonFlags(fs *flag.FlagSet) {
 
 type commonOptions struct {
 	browserApp *browserApplication
+	browserAll bool
 	maxTabs    int
 	prefix     string
 	clipboard  bool
 	verbose    bool
 }
 
-func parseCommonOptions() (*commonOptions, error) {
+func parseCommonOptions(allowAll bool) (*commonOptions, error) {
 	opts := &commonOptions{}
 
 	// Set browser application
-	browserApp, validBrowser := browserApplications[strings.ToLower(cFlags.browser)]
-	if !validBrowser {
-		names := []string{}
-		for name := range browserApplications {
-			names = append(names, name)
+	if allowAll && strings.EqualFold(cFlags.browser, browserNameAll) {
+		opts.browserAll = true
+	} else {
+		browserApp, validBrowser := browserApplications[strings.ToLower(cFlags.browser)]
+		if !validBrowser {
+			names := []string{}
+			for name := range browserApplications {
+				names = append(names, name)
+			}
+			sort.Strings(names)
+			return nil, fmt.Errorf("browser must be one of %v", names)
 		}
-		sort.Strings(names)
-		return nil, fmt.Errorf("browser must be one of %v", names)
+		opts.browserApp = browserApp
 	}
-	opts.browserApp = browserApp
 
 	// Set max tabs
 	if cFlags.maxTabs <= 0 || cFlags.maxTabs > defaultMaxTabs {
