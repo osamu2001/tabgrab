@@ -136,7 +136,7 @@ func openTabs(opts *tabsOptions) error {
 	}
 
 	switch opts.browserApp.name {
-	case browserNameChrome, browserNameBrave:
+	case browserNameChrome, browserNameBrave, browserNameAtlas, browserNameComet:
 		err := openTabsChromium(opts, urls)
 		if err != nil {
 			return err

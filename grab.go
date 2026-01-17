@@ -115,16 +115,27 @@ func grabTabs(opts *grabOptions) error {
 	// Buffers to capture stdout and stderr
 	var stdout, stderr bytes.Buffer
 
+	tabNameProp := "title"
+	if opts.browserApp.name == browserNameSafari {
+		tabNameProp = "name"
+	}
 	// Script to capture URL of tab i
-	tabScript := "tell application \"" + opts.browserApp.cmdName + "\" to get {URL, NAME} of tab %d of window 1"
+	tabScript := "tell application \"" + opts.browserApp.cmdName + "\" to get {URL, " + tabNameProp + "} of tab %d of window 1"
 
-	for i := 0; i < opts.maxTabs; i++ {
-		err := execOsaScript(fmt.Sprintf(tabScript, i+1), &stdout, &stderr, opts.verbose)
-		if err != nil {
-			if errors.Is(err, errEndOfTabs) {
-				break
+	running, err := isBrowserRunning(opts.browserApp.cmdName, opts.verbose)
+	if err != nil {
+		return fmt.Errorf("failed to check if browser is running: %w", err)
+	}
+
+	if running {
+		for i := 0; i < opts.maxTabs; i++ {
+			err := execOsaScript(fmt.Sprintf(tabScript, i+1), &stdout, &stderr, opts.verbose)
+			if err != nil {
+				if errors.Is(err, errEndOfTabs) {
+					break
+				}
+				return fmt.Errorf("failed to get tab: %w", err)
 			}
-			return fmt.Errorf("failed to get tab: %w", err)
 		}
 	}
 

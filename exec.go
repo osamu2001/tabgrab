@@ -34,3 +34,19 @@ func execOsaScript(script string, stdout *bytes.Buffer, stderr *bytes.Buffer, ve
 
 	return nil
 }
+
+func isBrowserRunning(appName string, verbose bool) (bool, error) {
+	// Query System Events to avoid launching the app when it isn't running.
+	script := fmt.Sprintf("tell application \"System Events\" to (name of processes) contains %q", appName)
+	cmd := exec.Command("osascript", "-e", script) // #nosec
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if verbose {
+		log.Printf("executing: %s\n", cmd.String())
+	}
+	if err := cmd.Run(); err != nil {
+		return false, fmt.Errorf("%s\n%v\n", stderr.String(), err)
+	}
+	return bytes.Equal(bytes.TrimSpace(stdout.Bytes()), []byte("true")), nil
+}
